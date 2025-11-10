@@ -9,12 +9,11 @@
         - name: Validate top-level L2VN input
           ansible.builtin.assert:
             that:
-              - asn is defined
               - devices is defined and devices|length > 0
               - l2vns is defined
               - l2vns is iterable
               - l2vns | length > 0
-            fail_msg: "Missing or invalid top-level vars: need 'asn' and non-empty 'l2vns' list (and either mac_address or devices list)."
+            fail_msg: "Missing or invalid top-level vars: need non-empty 'l2vns' list and 'devices' list."
 
         - name: Validate each L2VN entry mandatory fields
           ansible.builtin.assert:
@@ -23,6 +22,8 @@
               - item.vlan_id is defined
               - item.vni is defined
               - item.associated_l3vn is defined
+              - item.import_rt is defined
+              - item.export_rt is defined
               - item.multicast_group is defined
               - item.l2vn_pool is defined
               - item.l2vn_pool.ipv4_address is defined
@@ -53,7 +54,7 @@
           vars:
             mac_address: "{{ item.mac_address }}"
             rendered_l2vn_anycast_mcast: "{{ lookup('template', './jinja_templates/l2vn_anycast_mcast_cli.j2') }}"
-          cisco.dnac.template_workflow_manager:
+          cisco.dnac.evpn_l2vn_template_workflow_manager:
             dnac_host: "{{ dnac_host }}"
             dnac_port: "{{ dnac_port }}"
             dnac_username: "{{ dnac_username }}"
@@ -65,6 +66,9 @@
             dnac_log: true
             config_verify: true
             state: merged
+            l2vn_type: anycast
+            l2vns: "{{ l2vns }}"
+            devices: "{{ devices }}"
             config:
               - configuration_templates:
                   project_name: "evpn_l2vn_anycast_mcast"

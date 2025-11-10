@@ -1,10 +1,11 @@
-asn: 1001
 l2vns:
   - l2vn_name: L2VN-MCAST-1
     vlan_id: 40
     vni: 5040
     associated_l3vn: vrf-1
     multicast_group: 237.1.1.1
+    import_rt: 65000:100
+    export_rt: 65000:100
     l2vn_pool:
       ipv4_address: 14.14.0.1
       ipv4_netmask: 255.255.0.0
@@ -15,6 +16,8 @@ l2vns:
     vni: 5050
     associated_l3vn: vrf-1
     multicast_group: 237.1.1.2
+    import_rt: 65000:100
+    export_rt: 65000:100
     l2vn_pool:
       ipv4_address: 15.15.0.1
       ipv4_netmask: 255.255.0.0
