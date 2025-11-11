@@ -1,1 +1,173 @@
+{% for l3vn in l3vns %}
+{# Get device-specific overrides if they exist #}
+{% set device_override = l3vn_device_overrides.get(item.1.device_name, {}).get(l3vn.vrf_name, {}) %}
+{% set rd_prefix = device_override.get('rd_prefix', item.1.loopback_ip) %}
+{% set device_loopbacks = device_override.get('loopbacks', l3vn.loopbacks) %}
 
+{# VRF Definition #}
+vrf definition {{ l3vn.vrf_name }}
+ rd {{ rd_prefix }}:{{ l3vn.rd_suffix }}
+ address-family ipv4
+{% for rt in l3vn.rt_import %}
+ route-target import {{ rt }}
+{% endfor %}
+{% for rt in l3vn.rt_import %}
+ route-target import {{ rt }} stitching
+{% endfor %}
+{% for rt in l3vn.rt_export %}
+ route-target export {{ rt }} stitching
+{% endfor %}
+{% for rt in l3vn.rt_export %}
+ route-target export {{ rt }}
+{% endfor %}
+{% if l3vn.mdt is defined %}
+{% if l3vn.mdt.overlay_use_bgp is defined and l3vn.mdt.overlay_use_bgp %}
+ mdt overlay use-bgp
+{% endif %}
+{% if l3vn.mdt.auto_discovery %}
+ mdt auto-discovery {{ l3vn.mdt.auto_discovery }}
+{% endif %}
+{% if l3vn.mdt.default_vxlan %}
+ mdt default vxlan {{ l3vn.mdt.default_vxlan }}
+{% endif %}
+{% endif %}
+ address-family ipv6
+{% if l3vn.mdt is defined %}
+{% if l3vn.mdt.auto_discovery %}
+ mdt auto-discovery {{ l3vn.mdt.auto_discovery }}
+{% endif %}
+{% if l3vn.mdt.default_vxlan %}
+ mdt default vxlan {{ l3vn.mdt.default_vxlan }}
+{% endif %}
+{% if l3vn.mdt.overlay_use_bgp is defined and l3vn.mdt.overlay_use_bgp %}
+ mdt overlay use-bgp
+{% endif %}
+{% if l3vn.mdt.data_groups is defined %}
+{% for data_group in l3vn.mdt.data_groups %}
+ mdt data vxlan {{ data_group.group }} {{ data_group.mask }}
+{% endfor %}
+{% endif %}
+{% if l3vn.mdt.data_threshold is defined %}
+ mdt data threshold {{ l3vn.mdt.data_threshold }}
+{% endif %}
+{% endif %}
+{% for rt in l3vn.rt_import %}
+ route-target import {{ rt }}
+{% endfor %}
+{% for rt in l3vn.rt_import %}
+ route-target import {{ rt }} stitching
+{% endfor %}
+{% for rt in l3vn.rt_export %}
+ route-target export {{ rt }} stitching
+{% endfor %}
+{% for rt in l3vn.rt_export %}
+ route-target export {{ rt }}
+{% endfor %}
+
+{# VLAN Configuration #}
+vlan configuration {{ l3vn.vlan_id }}
+ member vni {{ l3vn.vni }}
+vlan {{ l3vn.vlan_id }}
+ name Vlan{{ l3vn.vlan_id }}
+ exit
+
+{# Multicast Routing #}
+{% if l3vn.multicast is defined %}
+{% if l3vn.multicast.ipv4_enabled %}
+ip multicast-routing vrf {{ l3vn.vrf_name }}
+{% endif %}
+{% if l3vn.multicast.ipv6_enabled %}
+ipv6 multicast-routing vrf {{ l3vn.vrf_name }}
+{% endif %}
+{% endif %}
+
+{# NVE Interface - VNI to VRF mapping #}
+interface nve1
+ member vni {{ l3vn.vni }} vrf {{ l3vn.vrf_name }}
+
+{# Loopback Interfaces #}
+{% if device_loopbacks is defined %}
+{% for loopback in device_loopbacks %}
+interface {{ loopback.name }}
+ vrf forwarding {{ l3vn.vrf_name }}
+{% if loopback.ipv6_enable is defined and loopback.ipv6_enable %}
+ ipv6 enable
+{% endif %}
+{% if loopback.ipv4 %}
+ ip address {{ loopback.ipv4 }}
+{% endif %}
+{% if loopback.ipv6 is defined %}
+ ipv6 address {{ loopback.ipv6 }}
+{% endif %}
+{% if loopback.pim_sparse %}
+ ip pim sparse-mode
+{% endif %}
+ exit
+{% endfor %}
+{% endif %}
+
+{# SVI Interface #}
+{% if l3vn.svi is defined %}
+interface Vlan{{ l3vn.vlan_id }}
+ vrf forwarding {{ l3vn.vrf_name }}
+{% if l3vn.svi.ipv6_enable %}
+ ipv6 enable
+{% endif %}
+{% if l3vn.svi.ip_unnumbered %}
+ ip unnumbered {{ l3vn.svi.ip_unnumbered }}
+{% endif %}
+{% if l3vn.svi.pim_mode %}
+ ip pim {{ l3vn.svi.pim_mode }}
+{% endif %}
+{% if l3vn.svi.no_autostate %}
+ no autostate
+{% endif %}
+ exit
+{% endif %}
+
+{# PIM RP Configuration with Register Source (External RP) #}
+{% if l3vn.multicast is defined %}
+{% if l3vn.multicast.ipv6_enabled and l3vn.multicast.register_source %}
+ipv6 pim vrf {{ l3vn.vrf_name }} register-source {{ l3vn.multicast.register_source }}
+{% endif %}
+{% if l3vn.multicast.rp_address_ipv4 %}
+ip pim vrf {{ l3vn.vrf_name }} rp-address {{ l3vn.multicast.rp_address_ipv4 }}
+{% endif %}
+{% if l3vn.multicast.ipv4_enabled and l3vn.multicast.register_source %}
+ip pim vrf {{ l3vn.vrf_name }} register-source {{ l3vn.multicast.register_source }}
+{% endif %}
+{% if l3vn.multicast.rp_address_ipv6 %}
+ipv6 pim vrf {{ l3vn.vrf_name }} rp-address {{ l3vn.multicast.rp_address_ipv6 }}
+{% endif %}
+{% endif %}
+
+{# BGP Configuration #}
+router bgp {{ asn }}
+{% if l3vn.multicast is defined and l3vn.multicast.ipv6_enabled %}
+ address-family ipv6 vrf {{ l3vn.vrf_name }}
+ advertise l2vpn evpn
+{% if l3vn.router_bgp is defined and l3vn.router_bgp.maximum_paths_eibgp is defined %}
+ maximum-paths eibgp {{ l3vn.router_bgp.maximum_paths_eibgp }}
+{% endif %}
+{% if l3vn.router_bgp is defined and l3vn.router_bgp.redistribute is defined %}
+{% for redist in l3vn.router_bgp.redistribute %}
+ redistribute {{ redist }}
+{% endfor %}
+{% endif %}
+{% endif %}
+{% if l3vn.multicast is defined and l3vn.multicast.ipv4_enabled %}
+ address-family ipv4 vrf {{ l3vn.vrf_name }}
+ advertise l2vpn evpn
+{% if l3vn.router_bgp is defined and l3vn.router_bgp.maximum_paths_eibgp is defined %}
+ maximum-paths eibgp {{ l3vn.router_bgp.maximum_paths_eibgp }}
+{% endif %}
+{% if l3vn.router_bgp is defined and l3vn.router_bgp.redistribute is defined %}
+{% for redist in l3vn.router_bgp.redistribute %}
+ redistribute {{ redist }}
+{% endfor %}
+{% endif %}
+{% endif %}
+ exit
+ exit
+
+{% endfor %}
