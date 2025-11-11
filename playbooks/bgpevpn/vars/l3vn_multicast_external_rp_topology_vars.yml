@@ -1,0 +1,139 @@
+---
+# L3VN Multicast External RP specific parameters
+# Common variables (asn, l3vn_devices, soft_type, state, language, product_family) 
+# are imported from fabric_overlay_topology_localdevices.yml
+
+# L3VN Multicast definitions with External RP
+l3vns:
+  - vrf_name: "mcastexternal"
+    vlan_id: 3841
+    vni: 4099
+    rd_suffix: 3841
+    rt_import:
+      - "1111:3841"
+    rt_export:
+      - "1111:3841"
+    multicast:
+      ipv4_enabled: true
+      ipv6_enabled: true
+      pim_ipv4_mode: "sparse-mode"
+      pim_ipv6_mode: "sparse-mode"
+      rp_address_ipv4: "12.12.5.1"
+      rp_address_ipv6: "2134::5"
+      register_source: "Loopback5841"
+    mdt:
+      overlay_use_bgp: true
+      auto_discovery: "vxlan"
+      default_vxlan: "227.1.0.4"
+      data_groups:
+        - group: "239.0.1.20"
+          mask: "0.0.3.255"
+      data_threshold: 234
+    svi:
+      ipv6_enable: true
+      ip_unnumbered: "Loopback0"
+      pim_mode: "sparse-mode"
+      no_autostate: true
+    loopbacks:
+      - name: "Loopback5841"
+        ipv4: "11.11.0.2 255.255.255.255"
+        ipv6: "2001::2/128"
+        ipv6_enable: true
+        pim_sparse: true
+    router_bgp:
+      maximum_paths_eibgp: 4
+      redistribute:
+        - connected
+
+# Device specific overrides for multicast external RP
+l3vn_device_overrides:
+  evpn-app-c9k-28:
+    mcastexternal:
+      rd_prefix: "99.2.2.2"
+  evpn-app-vm26:
+    mcastexternal:
+      rd_prefix: "99.5.5.5"
+  evpn-app-c9k-31:
+    mcastexternal:
+      rd_prefix: "99.4.4.4"
+  evpn-app-c9k-30:
+    mcastexternal:
+      rd_prefix: "99.3.3.3"
+      loopbacks:
+        - name: "Loopback5841"
+          ipv4: "11.11.0.3 255.255.255.255"
+          ipv6: "2001::3/128"
+          ipv6_enable: true
+          pim_sparse: true
+
+l3vn_devices: # Spine is not included as no config needed for spine in L3VN Unicast
+  border:  # multiple border groups allowed
+    - group_name: border-group1
+      devices:
+        - device_name: evpn-app-c9k-30
+          mgmt_ip: 172.27.248.82
+          mac_address: 00:0c:29:c9:ee:a0
+          username: admin
+          password: Admin@123
+          enable_pwd: Lablab123!
+          loopback_ip: 99.3.3.3
+          neighbors:
+            - 99.1.1.1
+            - 99.6.6.6
+  leaf:  # multiple leaf groups allowed
+    - group_name: leaf-group1
+      devices:
+        - device_name: evpn-app-c9k-31
+          mgmt_ip: 172.27.248.83
+          mac_address: 00:50:56:be:98:20
+          username: admin
+          password: Admin@123
+          enable_pwd: Lablab123!
+          loopback_ip: 99.4.4.4
+          neighbors:
+            - 99.1.1.1
+            - 99.6.6.6
+    - group_name: leaf-group2
+      devices:
+        - device_name: evpn-app-c9k-28
+          mgmt_ip: 172.27.248.224
+          mac_address: 00:0c:29:4e:63:a9
+          username: admin
+          password: Admin@123
+          enable_pwd: Lablab123!
+          loopback_ip: 99.2.2.2
+          neighbors:
+            - 99.1.1.1
+            - 99.6.6.6
+        - device_name: evpn-app-vm26
+          mgmt_ip: 172.27.248.222
+          mac_address: 00:0c:29:b4:2b:aa
+          username: admin
+          password: Admin@123
+          enable_pwd: Lablab123!
+          loopback_ip: 99.5.5.5
+          neighbors:
+            - 99.1.1.1
+            - 99.6.6.6
+
+# External RP Servers configuration (optional, for documentation / future use)
+external_rp_servers:
+  - rp_address: "192.168.100.10"
+    rp_description: "External RP Server 1"
+    group_ranges:
+      - "239.20.1.0/24"
+      - "239.20.2.0/24"
+    access_method: "static"
+    redundancy_priority: 100
+        - ipv4_unicast
+        - ipv4_multicast
+
+# Mapping role to template path for L3VN Multicast External RP
+role_template_map:
+  leaf: ./jinja_templates/l3vn_multicast_external_rp_leaf_cli.j2
+  border: ./jinja_templates/l3vn_multicast_external_rp_border_cli.j2
+  leaf_delete: ./jinja_templates/l3vn_multicast_external_rp_leaf_delete_cli.j2
+  border_delete: ./jinja_templates/l3vn_multicast_external_rp_border_delete_cli.j2
+
+# L3VN Multicast External RP specific deployment parameters
+proj_name: L3VN_MULTICAST_EXTERNAL_RP_AUTOGEN

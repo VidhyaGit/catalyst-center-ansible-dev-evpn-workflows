@@ -1,0 +1,141 @@
+---
+# L3VN Multicast Anycast RP specific parameters
+# Common variables (asn, l3vn_devices, soft_type, state, language, product_family) 
+# are imported from fabric_overlay_topology_localdevices.yml
+
+# L3VN Multicast definitions with Anycast RP
+l3vns:
+  - vrf_name: "mcastrp"
+    vlan_id: 3841
+    vni: 4099
+    rd_suffix: 3841
+    rt_import:
+      - "1111:3841"
+    rt_export:
+      - "1111:3841"
+    multicast:
+      ipv4_enabled: true
+      ipv6_enabled: true
+      pim_ipv4_mode: "sparse-mode"
+      pim_ipv6_mode: "sparse-mode"
+      rp_address: "11.11.0.7"
+    mdt:
+      overlay_use_bgp_spt_only: true
+      auto_discovery: "vxlan"
+      default_vxlan: "227.1.0.4"
+      data_groups:
+        - group: "239.0.1.20"
+          mask: "0.0.3.255"
+      data_threshold: 234
+    svi:
+      ipv6_enable: true
+      ip_unnumbered: "Loopback0"
+      pim_mode: "sparse-mode"
+      no_autostate: true
+    loopbacks:
+      - name: "Loopback5841"
+        ipv4: "11.11.0.2 255.255.255.255"
+        ipv6: "2001::2/128"
+        ipv6_enable: true
+        pim_sparse: true
+      - name: "Loopback6841"
+        ipv4: "11.11.0.7 255.255.255.255"
+        pim_sparse: true
+    router_bgp:
+      maximum_paths_eibgp: 4
+      redistribute:
+        - connected
+
+# Device specific overrides for multicast anycast RP
+l3vn_device_overrides:
+  evpn-app-c9k-28:
+    mcastrp:
+      rd_prefix: "99.2.2.2"
+  evpn-app-vm26:
+    mcastrp:
+      rd_prefix: "99.5.5.5"
+  evpn-app-c9k-31:
+    mcastrp:
+      rd_prefix: "99.4.4.4"
+  evpn-app-c9k-30:
+    mcastrp:
+      rd_prefix: "99.3.3.3"
+      loopbacks:
+        - name: "Loopback5841"
+          ipv4: "11.11.0.3 255.255.255.255"
+          ipv6: "2001::3/128"
+          ipv6_enable: true
+          pim_sparse: true
+        - name: "Loopback6841"
+          ipv4: "11.11.0.7 255.255.255.255"
+          pim_sparse: true
+
+l3vn_devices: # Spine is not included as no config needed for spine in L3VN Unicast
+  border:  # multiple border groups allowed
+    - group_name: border-group1
+      devices:
+        - device_name: evpn-app-c9k-30
+          mgmt_ip: 172.27.248.82
+          mac_address: 00:0c:29:c9:ee:a0
+          username: admin
+          password: Admin@123
+          enable_pwd: Lablab123!
+          loopback_ip: 99.3.3.3
+          neighbors:
+            - 99.1.1.1
+            - 99.6.6.6
+  leaf:  # multiple leaf groups allowed
+    - group_name: leaf-group1
+      devices:
+        - device_name: evpn-app-c9k-31
+          mgmt_ip: 172.27.248.83
+          mac_address: 00:50:56:be:98:20
+          username: admin
+          password: Admin@123
+          enable_pwd: Lablab123!
+          loopback_ip: 99.4.4.4
+          neighbors:
+            - 99.1.1.1
+            - 99.6.6.6
+    - group_name: leaf-group2
+      devices:
+        - device_name: evpn-app-c9k-28
+          mgmt_ip: 172.27.248.224
+          mac_address: 00:0c:29:4e:63:a9
+          username: admin
+          password: Admin@123
+          enable_pwd: Lablab123!
+          loopback_ip: 99.2.2.2
+          neighbors:
+            - 99.1.1.1
+            - 99.6.6.6
+        - device_name: evpn-app-vm26
+          mgmt_ip: 172.27.248.222
+          mac_address: 00:0c:29:b4:2b:aa
+          username: admin
+          password: Admin@123
+          enable_pwd: Lablab123!
+          loopback_ip: 99.5.5.5
+          neighbors:
+            - 99.1.1.1
+            - 99.6.6.6
+
+# Anycast RP Sets configuration (optional, for documentation / future use)
+anycast_rp_sets:
+  - group_range: "239.1.1.0/24"
+    anycast_rp_address: "10.255.255.1"
+    rp_set_members:
+      - rp_address: "10.10.10.1"
+        device_name: "leaf-device1"
+      - rp_address: "10.10.10.2"
+        device_name: "leaf-device2"
+
+# Mapping role to template path for L3VN Multicast Anycast RP
+role_template_map:
+  leaf: ./jinja_templates/l3vn_multicast_anycast_rp_leaf_cli.j2
+  border: ./jinja_templates/l3vn_multicast_anycast_rp_border_cli.j2
+  leaf_delete: ./jinja_templates/l3vn_multicast_anycast_rp_leaf_delete_cli.j2
+  border_delete: ./jinja_templates/l3vn_multicast_anycast_rp_border_delete_cli.j2
+
+# L3VN Multicast Anycast RP specific deployment parameters
+proj_name: L3VN_MULTICAST_ANYCAST_RP_AUTOGEN
