@@ -7,6 +7,6 @@ l2vns:
       vlan_id: 50
       vni: 5050
       multicast_group: 237.1.1.2
-devices_mgmt_ips:
+devices:
   - 172.27.248.81
   - 172.27.248.83

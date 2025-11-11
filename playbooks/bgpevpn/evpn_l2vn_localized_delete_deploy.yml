@@ -26,13 +26,13 @@
             index_var: idx
             label: "{{ item.l2vn_name | default('UNNAMED') }}"
 
-        - name: Validate top-level devices_mgmt_ips input
+        - name: Validate top-level devices input
           ansible.builtin.assert:
             that:
-              - devices_mgmt_ips is defined
-              - devices_mgmt_ips is iterable
-              - devices_mgmt_ips | length > 0
-            fail_msg: "Invalid top-level vars: need non-empty 'devices_mgmt_ips' list."
+              - devices is defined
+              - devices is iterable
+              - devices | length > 0
+            fail_msg: "Invalid top-level vars: need non-empty 'devices' list."
 
         - name: Render l2vn_localized_delete_cli.j2 to a variable
           ansible.builtin.set_fact:
@@ -43,7 +43,7 @@
             var: rendered_l2vn_localized_delete
 
         - name: Create new l2vn localized delete template.
-          cisco.dnac.template_workflow_manager:
+          cisco.dnac.evpn_l2vn_template_workflow_manager:
             dnac_host: "{{ dnac_host }}"
             dnac_port: "{{ dnac_port }}"
             dnac_username: "{{ dnac_username }}"
@@ -55,6 +55,9 @@
             dnac_log: true
             config_verify: true
             state: merged
+            l2vn_type: localized
+            l2vns: "{{ l2vns }}"
+            devices: "{{ devices }}"
             config:
               - configuration_templates:
                   project_name: "evpn_l2vn_localized_delete"
@@ -75,4 +78,4 @@
                     - param_name: "vlan_name"
                       param_value: "testvlan31"
                   device_details:
-                    device_ips: "{{ devices_mgmt_ips }}"
+                    device_ips: "{{ devices }}"

@@ -1,8 +1,8 @@
 {% for l2vn in l2vns %}
 l2vpn evpn instance {{ l2vn.vlan_id }} vlan-based
  encapsulation vxlan
- route-target export {{ asn }}:{{ l2vn.vlan_id }}
- route-target import {{ asn }}:{{ l2vn.vlan_id }}
+ route-target export {{ l2vn.export_rt }}
+ route-target import {{ l2vn.import_rt }}
  no auto-route-target
  replication-type static
 !

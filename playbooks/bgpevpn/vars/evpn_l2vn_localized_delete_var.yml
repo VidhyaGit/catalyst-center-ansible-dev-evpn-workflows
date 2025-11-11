@@ -3,6 +3,6 @@ l2vns:
       vlan_id: 60
     - l2vn_name: L2VN-LOC-2
       vlan_id: 70
-devices_mgmt_ips:
+devices:
   - 172.27.248.81
   - 172.27.248.83
