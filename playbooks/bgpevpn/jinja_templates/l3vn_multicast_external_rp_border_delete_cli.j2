@@ -1,0 +1,72 @@
+{% for l3vn in l3vns %}
+{# Get device-specific overrides if they exist #}
+{% set device_override = l3vn_device_overrides.get(item.1.device_name, {}).get(l3vn.vrf_name, {}) %}
+{% set device_loopbacks = device_override.get('loopbacks', l3vn.loopbacks) %}
+
+{# Remove PIM RP Configuration with Register Source (External RP) #}
+{% if l3vn.multicast is defined %}
+{% if l3vn.multicast.rp_address_ipv6 %}
+no ipv6 pim vrf {{ l3vn.vrf_name }} rp-address {{ l3vn.multicast.rp_address_ipv6 }}
+{% endif %}
+{% if l3vn.multicast.ipv4_enabled and l3vn.multicast.register_source %}
+no ip pim vrf {{ l3vn.vrf_name }} register-source {{ l3vn.multicast.register_source }}
+{% endif %}
+{% if l3vn.multicast.rp_address_ipv4 %}
+no ip pim vrf {{ l3vn.vrf_name }} rp-address {{ l3vn.multicast.rp_address_ipv4 }}
+{% endif %}
+{% if l3vn.multicast.ipv6_enabled and l3vn.multicast.register_source %}
+no ipv6 pim vrf {{ l3vn.vrf_name }} register-source {{ l3vn.multicast.register_source }}
+{% endif %}
+{% endif %}
+!
+
+{# Remove BGP VRF Configuration #}
+router bgp {{ asn }}
+{% if l3vn.multicast is defined and l3vn.multicast.ipv4_enabled %}
+ no address-family ipv4 vrf {{ l3vn.vrf_name }}
+{% endif %}
+{% if l3vn.multicast is defined and l3vn.multicast.ipv6_enabled %}
+ no address-family ipv6 vrf {{ l3vn.vrf_name }}
+{% endif %}
+ exit
+!
+
+{# Remove SVI Interface #}
+no interface Vlan{{ l3vn.vlan_id }}
+!
+
+{# Remove Loopback Interfaces #}
+{% if device_loopbacks is defined %}
+{% for loopback in device_loopbacks %}
+no interface {{ loopback.name }}
+!
+{% endfor %}
+{% endif %}
+
+{# Remove NVE Interface VNI to VRF mapping #}
+interface nve1
+ no member vni {{ l3vn.vni }} vrf {{ l3vn.vrf_name }}
+!
+
+{# Remove Multicast Routing #}
+{% if l3vn.multicast is defined %}
+{% if l3vn.multicast.ipv6_enabled %}
+no ipv6 multicast-routing vrf {{ l3vn.vrf_name }}
+{% endif %}
+{% if l3vn.multicast.ipv4_enabled %}
+no ip multicast-routing vrf {{ l3vn.vrf_name }}
+{% endif %}
+{% endif %}
+!
+
+{# Remove VLAN Configuration #}
+no vlan {{ l3vn.vlan_id }}
+!
+no vlan configuration {{ l3vn.vlan_id }}
+!
+
+{# Remove VRF Definition #}
+no vrf definition {{ l3vn.vrf_name }}
+!
+
+{% endfor %}
